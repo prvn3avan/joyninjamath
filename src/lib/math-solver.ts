@@ -121,19 +121,19 @@ function tokenize(expr: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
   while (i < expr.length) {
-    const c = expr[i];
+    const c = expr[i]!;
     if (c === " " || c === "\t") {
       i++;
       continue;
     }
     if (/[0-9.]/.test(c)) {
       const m = expr.slice(i).match(/^(\d+\.?\d*|\.\d+)/);
-      if (!m) {
+      if (!m?.[1]) {
         throw new MathInputError(
           `There's a misplaced "." in your problem — check the numbers and try again.`,
         );
       }
-      const raw = m[1];
+      const raw: string = m[1];
       const value = parseFloat(raw);
       if (!Number.isFinite(value)) {
         throw new MathInputError("That number is too large to work with — try smaller values.");
@@ -340,9 +340,9 @@ function preprocess(raw: string): { expr: string; steps: string[] } {
   // "15% off 240" — a discount: you pay (100 − 15)% of 240.
   const off = expr.match(/^(.*?)(\d+(?:\.\d+)?)\s*%\s*off\s*(.+)$/i);
   if (off) {
-    const prefix = off[1].trim();
-    const pct = off[2];
-    const rest = off[3].trim();
+    const prefix = off[1]!.trim();
+    const pct = off[2]!;
+    const rest = off[3]!.trim();
     const pay = 100 - parseFloat(pct);
     steps.push(
       `${pct}% off means you pay the remaining ${pay}% of ${rest}: ${rest} × ${pay / 100}.`,
