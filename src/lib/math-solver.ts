@@ -409,7 +409,7 @@ export function solveMath(input: string): SolveResult {
     input: trimmed,
     question: displayExpr(expr),
     answerText,
-    altText,
+    ...(altText !== undefined ? { altText } : {}),
     steps: allSteps,
   };
 }
