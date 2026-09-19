@@ -10,13 +10,13 @@ import { MathInputError, solveMath, type SolveResult } from "@/lib/math-solver";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "joyninjamath — Solve math step by step" },
+      { title: "JoyNinjaMath — Solve math step by step" },
       {
         name: "description",
         content:
           "Instant answers with step-by-step working for arithmetic, fractions, decimals and percentages.",
       },
-      { property: "og:title", content: "joyninjamath — Solve math step by step" },
+      { property: "og:title", content: "JoyNinjaMath — Solve math step by step" },
       {
         property: "og:description",
         content:
@@ -70,7 +70,7 @@ function Index() {
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-14 sm:py-20">
         <header>
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            joyninjamath
+            JoyNinjaMath
           </h1>
           <p className="mt-2 text-muted-foreground">
             Answers with the working shown — sums, fractions, decimals and percentages.
