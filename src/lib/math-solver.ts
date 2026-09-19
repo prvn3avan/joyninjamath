@@ -134,12 +134,22 @@ function tokenize(expr: string): Token[] {
         );
       }
       const raw: string = m[1];
-      const value = parseFloat(raw);
-      if (!Number.isFinite(value)) {
-        throw new MathInputError("That number is too large to work with — try smaller values.");
+      // Parse decimals exactly: 0.1 → 1/10, never the float artifact.
+      const dot = raw.indexOf(".");
+      let f: Frac;
+      if (dot === -1) {
+        f = makeFrac(parseInt(raw, 10));
+      } else {
+        const places = raw.length - dot - 1;
+        f = makeFrac(parseInt(raw.replace(".", ""), 10), Math.pow(10, places));
       }
-      tokens.push({ t: "num", f: makeFrac(value), raw });
+      tokens.push({ t: "num", f, raw });
       i += raw.length;
+      if (i < expr.length && /[0-9.]/.test(expr[i]!)) {
+        throw new MathInputError(
+          `Two numbers are touching — add an operator between them, or check the decimal point.`,
+        );
+      }
       continue;
     }
     if (c === "+") {
@@ -237,12 +247,14 @@ class Parser {
       const a = (l.n * lcm) / l.d;
       const b = (r.n * lcm) / r.d;
       const rawSum = op === "+" ? a + b : a - b;
-      const converted =
-        a / lcm === l.n / l.d && r.d === lcm
-          ? `${fmtFrac(l)} stays ${a}/${lcm}`
-          : `${fmtFrac(l)} becomes ${a}/${lcm}`;
-      const reduced = res.n === rawSum && res.d === lcm ? "" : ` = ${fmtFrac(res)}`;
-      return `Use a common denominator of ${lcm}: ${converted} and ${fmtFrac(r)} becomes ${b}/${lcm}, then ${a}/${lcm} ${sym} ${b}/${lcm} = ${rawSum}/${lcm}${reduced}.`;
+      if (lcm === l.d && lcm === r.d) {
+        return `${a}/${lcm} ${sym} ${b}/${lcm} = ${rawSum}/${lcm}${reducedSuffix(res, rawSum, lcm)}.`;
+      }
+      const lPart =
+        lcm === l.d ? `${fmtFrac(l)} stays ${a}/${lcm}` : `${fmtFrac(l)} becomes ${a}/${lcm}`;
+      const rPart =
+        lcm === r.d ? `${fmtFrac(r)} stays ${b}/${lcm}` : `${fmtFrac(r)} becomes ${b}/${lcm}`;
+      return `Use a common denominator of ${lcm}: ${lPart} and ${rPart}, then ${a}/${lcm} ${sym} ${b}/${lcm} = ${rawSum}/${lcm}${reducedSuffix(res, rawSum, lcm)}.`;
     }
     return `${fmtFrac(l)} ${sym} ${fmtFrac(r)} = ${fmtFrac(res)}`;
   }
@@ -257,7 +269,14 @@ class Parser {
         const result = t.v === "*" ? mulF(left, right) : divF(left, right);
         const verb = t.v === "*" ? "Multiply" : "Divide";
         const sym = SYMBOL[t.v];
-        this.steps.push(`${verb}: ${fmtFrac(left)} ${sym} ${fmtFrac(right)} = ${fmtFrac(result)}`);
+        // Don't narrate reading a plain fraction like 3/4 — only real divisions.
+        const isFractionLiteral =
+          t.v === "/" && left.d === 1 && right.d === 1 && result.d !== 1;
+        if (!isFractionLiteral) {
+          this.steps.push(
+            `${verb}: ${fmtFrac(left)} ${sym} ${fmtFrac(right)} = ${fmtFrac(result)}`,
+          );
+        }
         left = result;
       } else if (t?.t === "lp") {
         // Implicit multiplication, e.g. 2(3 + 4)
