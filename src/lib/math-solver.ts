@@ -382,15 +382,6 @@ function preprocess(raw: string): { expr: string; steps: string[] } {
   return { expr, steps };
 }
 
-/** Cleaned-up display form of an expression (math symbols restored). */
-function displayExpr(expr: string): string {
-  return expr
-    .replace(/\*/g, " × ")
-    .replace(/\//g, " ÷ ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-void displayExpr;
 
 /**
  * Solve a math problem given in plain language.
