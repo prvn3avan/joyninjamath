@@ -260,7 +260,7 @@ class Parser {
         lcm === r.d ? `${fmtFrac(r)} stays ${b}/${lcm}` : `${fmtFrac(r)} becomes ${b}/${lcm}`;
       return `Use a common denominator of ${lcm}: ${lPart} and ${rPart}, then ${a}/${lcm} ${sym} ${b}/${lcm} = ${rawSum}/${lcm}${reducedSuffix(res, rawSum, lcm)}.`;
     }
-    return `${fmtFrac(l)} ${sym} ${fmtFrac(r)} = ${fmtFrac(res)}`;
+    return `${fmtFrac(l)} ${sym} ${fmtFrac(r)} = ${fmtFrac(res)}.`;
   }
 
   private parseMul(): Frac {
