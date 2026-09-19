@@ -382,7 +382,7 @@ function preprocess(raw: string): { expr: string; steps: string[] } {
   return { expr, steps };
 }
 
-/** Display form of the normalized expression with math symbols restored. */
+/** Cleaned-up display form of an expression (math symbols restored). */
 function displayExpr(expr: string): string {
   return expr
     .replace(/\*/g, " × ")
@@ -390,6 +390,7 @@ function displayExpr(expr: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+void displayExpr;
 
 /**
  * Solve a math problem given in plain language.
@@ -432,7 +433,7 @@ export function solveMath(input: string): SolveResult {
 
   return {
     input: trimmed,
-    question: displayExpr(expr),
+    question: trimmed,
     answerText,
     ...(altText !== undefined ? { altText } : {}),
     steps: allSteps,
