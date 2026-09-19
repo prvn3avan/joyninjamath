@@ -246,7 +246,7 @@ class Parser {
 
   private addSubStep(op: "+" | "-", l: Frac, r: Frac, res: Frac): string {
     const sym = SYMBOL[op];
-    if (l.d > 1 || r.d > 1) {
+    if (l.d > 1 && r.d > 1) {
       const lcm = (l.d * r.d) / gcd(l.d, r.d);
       const a = (l.n * lcm) / l.d;
       const b = (r.n * lcm) / r.d;
