@@ -65,6 +65,10 @@ function fmtFrac(f: Frac): string {
   return f.d === 1 ? String(f.n) : `${f.n}/${f.d}`;
 }
 
+function reducedSuffix(res: Frac, rawN: number, rawD: number): string {
+  return res.n === rawN && res.d === rawD ? "" : ` = ${fmtFrac(res)}`;
+}
+
 function mixedText(f: Frac): string | null {
   if (f.d === 1 || Math.abs(f.n) < f.d) return null;
   const whole = Math.trunc(f.n / f.d);
@@ -410,18 +414,20 @@ export function solveMath(input: string): SolveResult {
   const allSteps = [...preSteps, ...steps];
   const dec = decimalText(result);
   const mixed = mixedText(result);
+  const hasFraction = /\//.test(trimmed);
 
   let answerText: string;
   let altText: string | undefined;
   if (result.d === 1) {
     answerText = String(result.n);
-  } else if (mixed) {
-    answerText = mixed;
-    const fracPart = `${fmtFrac(result)}${dec.exact ? ` = ${dec.text}` : ` ≈ ${dec.text}`}`;
-    altText = `= ${fracPart}`;
+  } else if (hasFraction || !dec.exact) {
+    // Lead with the exact fraction; show the decimal alongside.
+    answerText = mixed ?? fmtFrac(result);
+    altText = `= ${fmtFrac(result)}${dec.exact ? ` = ${dec.text}` : ` ≈ ${dec.text}`}`;
   } else {
-    answerText = fmtFrac(result);
-    altText = dec.exact ? `= ${dec.text}` : `≈ ${dec.text}`;
+    // Decimal input, terminating result: lead with the decimal.
+    answerText = dec.text;
+    altText = `= ${fmtFrac(result)}`;
   }
 
   return {
