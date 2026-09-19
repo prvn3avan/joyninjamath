@@ -77,13 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "joyninjamath — Solve math step by step" },
+      { title: "JoyNinjaMath — Solve math step by step" },
       {
         name: "description",
         content:
           "Instant answers with step-by-step working for arithmetic, fractions, decimals and percentages.",
       },
-      { property: "og:title", content: "joyninjamath — Solve math step by step" },
+      { property: "og:title", content: "JoyNinjaMath — Solve math step by step" },
       {
         property: "og:description",
         content:
