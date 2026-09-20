@@ -4,10 +4,10 @@
 Let someone choose a photo or take one with their phone, have JoyNinjaMath read the problem, and return a clear answer with step-by-step working.
 
 ## User experience
-- Add a compact **Scan a problem** option alongside the existing typed input.
-- Open the device camera/gallery through the normal picture picker.
+- Add a photo icon button directly on the side of the existing question input, without creating a separate scan section.
+- Clicking it opens the device camera/gallery through the normal picture picker.
 - Show the selected image with controls to replace or remove it.
-- Enable **Solve picture** only after a valid image is selected.
+- Analyze the uploaded photo when the user chooses **Solve picture**.
 - While the picture is being read, show a clear analyzing state and prevent duplicate submissions.
 - Display the recognized question, final answer, and numbered working in the existing solution area.
 - Keep typed questions, topic buttons, and recent typed problems working as they do now.
