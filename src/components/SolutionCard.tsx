@@ -1,7 +1,8 @@
 import type { SolveResult } from "@/lib/math-solver";
+import type { PhotoMathResult } from "@/lib/photo-math.types";
 
 interface SolutionCardProps {
-  result: SolveResult | null;
+  result: SolveResult | PhotoMathResult | null;
   error: string | null;
   onPick: (example: string) => void;
 }
@@ -13,7 +14,7 @@ export function SolutionCard({ result, error, onPick }: SolutionCardProps) {
     return (
       <section
         aria-live="polite"
-        className="rounded-2xl border border-destructive/30 bg-card p-6"
+        className="rounded-lg border border-destructive/30 bg-card p-6"
       >
         <p className="text-sm font-medium text-destructive">{error}</p>
       </section>
@@ -22,7 +23,7 @@ export function SolutionCard({ result, error, onPick }: SolutionCardProps) {
 
   if (!result) {
     return (
-      <section className="rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center">
+      <section className="rounded-lg border border-dashed border-border bg-card/60 p-8 text-center">
         <h2 className="text-lg font-semibold text-foreground">Type a problem above</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Or start with one of these:
@@ -44,7 +45,7 @@ export function SolutionCard({ result, error, onPick }: SolutionCardProps) {
   }
 
   return (
-    <section aria-live="polite" className="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+    <section aria-live="polite" className="rounded-lg border border-border bg-card p-6 shadow-sm sm:p-8">
       <p className="font-mono text-sm text-muted-foreground">
         {result.question} <span className="mx-1">=</span>
       </p>
