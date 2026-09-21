@@ -1,5 +1,5 @@
 import { Camera } from "lucide-react";
-import { useEffect, useRef, type ChangeEvent } from "react";
+import { useEffect, useRef, type ChangeEvent, type RefObject } from "react";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +9,7 @@ interface MathInputProps {
   onSubmit: () => void;
   onPhotoSelect: (file: File) => void;
   photoDisabled?: boolean;
+  photoInputRef?: RefObject<HTMLInputElement | null>;
 }
 
 export function MathInput({
@@ -17,9 +18,11 @@ export function MathInput({
   onSubmit,
   onPhotoSelect,
   photoDisabled = false,
+  photoInputRef,
 }: MathInputProps) {
   const ref = useRef<HTMLInputElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const internalFileRef = useRef<HTMLInputElement>(null);
+  const fileRef = photoInputRef ?? internalFileRef;
 
   // Focus the input as soon as the page loads.
   useEffect(() => {
@@ -68,6 +71,7 @@ export function MathInput({
         ref={fileRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        capture="environment"
         className="sr-only"
         aria-label="Choose a photo of a math problem"
         onChange={(event: ChangeEvent<HTMLInputElement>) => {
@@ -82,8 +86,8 @@ export function MathInput({
         className="h-auto w-16 shrink-0 rounded-lg"
         onClick={() => fileRef.current?.click()}
         disabled={photoDisabled}
-        aria-label="Upload a photo of a math problem"
-        title="Upload a photo"
+        aria-label="Take or upload a photo of a math problem"
+        title="Take or upload a photo"
       >
         <Camera className="size-5" />
       </Button>
