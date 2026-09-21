@@ -107,7 +107,7 @@ export async function analyzeMathPhoto(
 
   let response: Response | null = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    response = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
+    const currentResponse = await fetch("https://ai.gateway.lovable.dev/v1/responses", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -116,10 +116,11 @@ export async function analyzeMathPhoto(
       },
       body,
     });
-    if (response.ok) break;
-    const responseText = await response.text();
-    if ((response.status === 429 || response.status >= 500) && attempt < 2) {
-      await new Promise((resolve) => setTimeout(resolve, retryDelay(response, attempt)));
+    response = currentResponse;
+    if (currentResponse.ok) break;
+    const responseText = await currentResponse.text();
+    if ((currentResponse.status === 429 || currentResponse.status >= 500) && attempt < 2) {
+      await new Promise((resolve) => setTimeout(resolve, retryDelay(currentResponse, attempt)));
       continue;
     }
     throw new Error(safeMessage(responseText, "The AI service could not analyze this photo."));
