@@ -74,27 +74,20 @@ async function readOutputText(response: Response) {
   return output;
 }
 
-export async function analyzeMathPhoto(
-  imageDataUrl: string,
+type InputContent = Array<Record<string, unknown>>;
+
+async function solveWithGateway(
+  content: InputContent,
   apiKey: string,
+  unreadableMessage: string,
+  failureMessage: string,
 ): Promise<PhotoMathResult> {
   const body = JSON.stringify({
     model: "openai/gpt-6-astra",
     stream: true,
     reasoning: { effort: "medium", summary: "auto" },
     include: ["reasoning.encrypted_content"],
-    input: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: "Read the single math question in this image, solve it accurately, and explain the working in clear numbered steps for a general learner. Preserve fractions exactly where useful. If there is no readable math question, do not guess: return question as 'Unreadable', answer as 'Unable to solve', alternateForm as null, and one step explaining that a clearer photo is needed.",
-          },
-          { type: "input_image", image_url: imageDataUrl },
-        ],
-      },
-    ],
+    input: [{ role: "user", content }],
     text: {
       format: {
         type: "json_schema",
