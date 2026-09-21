@@ -74,27 +74,20 @@ async function readOutputText(response: Response) {
   return output;
 }
 
-export async function analyzeMathPhoto(
-  imageDataUrl: string,
+type InputContent = Array<Record<string, unknown>>;
+
+async function solveWithGateway(
+  content: InputContent,
   apiKey: string,
+  unreadableMessage: string,
+  failureMessage: string,
 ): Promise<PhotoMathResult> {
   const body = JSON.stringify({
     model: "openai/gpt-6-astra",
     stream: true,
     reasoning: { effort: "medium", summary: "auto" },
     include: ["reasoning.encrypted_content"],
-    input: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "input_text",
-            text: "Read the single math question in this image, solve it accurately, and explain the working in clear numbered steps for a general learner. Preserve fractions exactly where useful. If there is no readable math question, do not guess: return question as 'Unreadable', answer as 'Unable to solve', alternateForm as null, and one step explaining that a clearer photo is needed.",
-          },
-          { type: "input_image", image_url: imageDataUrl },
-        ],
-      },
-    ],
+    input: [{ role: "user", content }],
     text: {
       format: {
         type: "json_schema",
@@ -123,24 +116,22 @@ export async function analyzeMathPhoto(
       await new Promise((resolve) => setTimeout(resolve, retryDelay(currentResponse, attempt)));
       continue;
     }
-    throw new Error(safeMessage(responseText, "The AI service could not analyze this photo."));
+    throw new Error(safeMessage(responseText, failureMessage));
   }
 
-  if (!response?.ok) throw new Error("The AI service could not analyze this photo.");
+  if (!response?.ok) throw new Error(failureMessage);
   const output = await readOutputText(response);
-  if (!output.trim()) throw new Error("No answer was found in that photo. Try a clearer picture.");
+  if (!output.trim()) throw new Error(unreadableMessage);
 
   let json: unknown;
   try {
     json = JSON.parse(output);
   } catch {
-    throw new Error("The photo was read, but the answer could not be formatted. Please try again.");
+    throw new Error("The answer could not be formatted. Please try again.");
   }
   const parsed = PhotoResultSchema.safeParse(json);
-  if (!parsed.success) throw new Error("The photo was read, but the answer was incomplete. Please try again.");
-  if (parsed.data.question === "Unreadable") {
-    throw new Error("I couldn't find a clear math question. Try a brighter, closer photo.");
-  }
+  if (!parsed.success) throw new Error("The answer came back incomplete. Please try again.");
+  if (parsed.data.question === "Unreadable") throw new Error(unreadableMessage);
 
   return {
     input: parsed.data.question,
@@ -149,4 +140,37 @@ export async function analyzeMathPhoto(
     ...(parsed.data.alternateForm ? { altText: parsed.data.alternateForm } : {}),
     steps: parsed.data.steps,
   };
+}
+
+const PHOTO_PROMPT =
+  "Read the single math question in this image, solve it accurately, and explain the working in clear numbered steps for a general learner. Preserve fractions exactly where useful. If there is no readable math question, do not guess: return question as 'Unreadable', answer as 'Unable to solve', alternateForm as null, and one step explaining that a clearer photo is needed.";
+
+const WORD_PROMPT =
+  "Solve this math word problem. Return the question restated clearly, the final answer with its unit (for example '3 bananas'), and the working as clear short numbered steps a general learner can follow: what is given, what operation is needed and why, then the calculation. Keep fractions exact where useful. If the text is not a math problem at all, do not guess: return question as 'Unreadable', answer as 'Unable to solve', alternateForm as null, and one step saying it needs a clearer math question.\n\nProblem:\n";
+
+export async function analyzeMathPhoto(
+  imageDataUrl: string,
+  apiKey: string,
+): Promise<PhotoMathResult> {
+  return solveWithGateway(
+    [
+      { type: "input_text", text: PHOTO_PROMPT },
+      { type: "input_image", image_url: imageDataUrl },
+    ],
+    apiKey,
+    "I couldn't find a clear math question. Try a brighter, closer photo.",
+    "The AI service could not analyze this photo.",
+  );
+}
+
+export async function analyzeMathWordProblem(
+  problem: string,
+  apiKey: string,
+): Promise<PhotoMathResult> {
+  return solveWithGateway(
+    [{ type: "input_text", text: `${WORD_PROMPT}${problem}` }],
+    apiKey,
+    "I couldn't work that one out. Try rewording the question.",
+    "The AI service could not solve that question.",
+  );
 }
