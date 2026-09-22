@@ -57,8 +57,9 @@ export function SolutionCard({ result, error, onPick, isThinking = false }: Solu
 
   return (
     <section aria-live="polite" className="rounded-lg border border-border bg-card p-6 shadow-sm sm:p-8">
-      <p className="font-mono text-sm text-muted-foreground">
-        {result.question} <span className="mx-1">=</span>
+      <p className="font-mono text-sm leading-relaxed text-muted-foreground">
+        {result.question}
+        {!/[a-z]{3,}/i.test(result.question) && <span className="mx-1">=</span>}
       </p>
       <p className="mt-2 font-mono text-5xl font-semibold tracking-tight text-solution">
         {result.answerText}
