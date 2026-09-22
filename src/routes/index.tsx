@@ -173,7 +173,7 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-5 py-14 sm:py-20">
+      <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-5 py-14 sm:py-20">
         <header>
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             JoyNinjaMath

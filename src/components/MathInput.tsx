@@ -46,7 +46,7 @@ export function MathInput({
           aria-label="Math problem"
           autoComplete="off"
           spellCheck={false}
-          className="h-full w-full rounded-lg border border-border bg-card px-5 py-5 pr-12 font-mono text-xl text-foreground shadow-sm outline-none transition-shadow placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring sm:text-2xl"
+          className="h-full w-full rounded-lg border border-border bg-card px-5 py-6 pr-12 font-mono text-xl text-foreground shadow-sm outline-none transition-shadow placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring sm:text-2xl"
         />
         {value && (
           <Button
