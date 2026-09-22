@@ -182,7 +182,8 @@ function Index() {
             JoyNinjaMath
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Answers with the working shown — sums, fractions, decimals and percentages.
+            Answers with the working shown — sums, fractions, percentages, and word problems
+            written in plain English. Press Enter to solve a written question.
           </p>
         </header>
 
