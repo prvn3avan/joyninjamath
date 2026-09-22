@@ -10,6 +10,15 @@ import { TopicButtons } from "@/components/TopicButtons";
 import { MathInputError, solveMath, type SolveResult } from "@/lib/math-solver";
 import { solveMathPhoto } from "@/lib/photo-math.functions";
 import type { PhotoMathResult } from "@/lib/photo-math.types";
+import { solveWordProblem } from "@/lib/word-math.functions";
+
+const MATH_WORDS =
+  /\b(what|is|calculate|plus|minus|times|divided|by|of|off|percent|and)\b/gi;
+
+/** Wordy input (a story problem) needs the AI solver, not the arithmetic parser. */
+function isWordProblem(text: string) {
+  return /[a-z]{2,}/i.test(text.replace(MATH_WORDS, " "));
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
