@@ -49,34 +49,76 @@ function Index() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [photo, setPhoto] = useState<{ name: string; dataUrl: string } | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const analyzePhoto = useServerFn(solveMathPhoto);
+  const analyzeWords = useServerFn(solveWordProblem);
 
-  const run = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) {
-      setResult(null);
-      setError(null);
-      return;
-    }
-    try {
-      const r = solveMath(trimmed);
-      setResult(r);
-      setError(null);
-      setHistory((h) =>
-        h[0]?.input === r.input
-          ? h
-          : [{ input: r.input, answer: r.answerText }, ...h].slice(0, 5),
-      );
-    } catch (e) {
-      setResult(null);
-      setError(
-        e instanceof MathInputError
-          ? e.message
-          : "Something went wrong solving that — try rephrasing it.",
-      );
-    }
+  const remember = useCallback((item: HistoryItem) => {
+    setHistory((items) =>
+      [item, ...items.filter((existing) => existing.input !== item.input)].slice(0, 5),
+    );
   }, []);
+
+  const solveWords = useCallback(
+    async (text: string) => {
+      setIsThinking(true);
+      setError(null);
+      setResult(null);
+      try {
+        const response = await analyzeWords({ data: { problem: text } });
+        if (!response.ok) {
+          setError(response.error);
+          return;
+        }
+        setResult(response.result);
+        remember({ input: text, answer: response.result.answerText });
+      } catch {
+        setError("That question could not be solved. Please try again.");
+      } finally {
+        setIsThinking(false);
+      }
+    },
+    [analyzeWords, remember],
+  );
+
+  const run = useCallback(
+    (text: string, allowWords = false) => {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        setResult(null);
+        setError(null);
+        return;
+      }
+      if (isWordProblem(trimmed)) {
+        if (allowWords) {
+          void solveWords(trimmed);
+        } else {
+          setResult(null);
+          setError(null);
+        }
+        return;
+      }
+      try {
+        const r = solveMath(trimmed);
+        setResult(r);
+        setError(null);
+        setHistory((h) =>
+          h[0]?.input === r.input
+            ? h
+            : [{ input: r.input, answer: r.answerText }, ...h].slice(0, 5),
+        );
+      } catch (e) {
+        setResult(null);
+        setError(
+          e instanceof MathInputError
+            ? e.message
+            : "Something went wrong solving that — try rephrasing it.",
+        );
+      }
+    },
+    [solveWords],
+  );
 
   const selectPhoto = useCallback((file: File) => {
     if (!(["image/jpeg", "image/png", "image/webp"] as string[]).includes(file.type)) {
