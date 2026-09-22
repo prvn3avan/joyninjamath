@@ -90,7 +90,6 @@ function Index() {
         setError(null);
         return;
       }
-      console.log("RUN", trimmed, allowWords, isWordProblem(trimmed));
       if (isWordProblem(trimmed)) {
         // Written questions go to the step-by-step solver, only when submitted.
         if (allowWords) void solveWords(trimmed);
