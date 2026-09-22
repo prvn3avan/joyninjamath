@@ -91,12 +91,8 @@ function Index() {
         return;
       }
       if (isWordProblem(trimmed)) {
-        if (allowWords) {
-          void solveWords(trimmed);
-        } else {
-          setResult(null);
-          setError(null);
-        }
+        // Written questions go to the step-by-step solver, only when submitted.
+        if (allowWords) void solveWords(trimmed);
         return;
       }
       try {
@@ -168,8 +164,9 @@ function Index() {
     }
   }, [analyzePhoto, isAnalyzing, photo]);
 
-  // Solve as the user types, with a short debounce.
+  // Solve arithmetic as the user types, with a short debounce.
   useEffect(() => {
+    if (isWordProblem(input)) return;
     const id = setTimeout(() => run(input), 250);
     return () => clearTimeout(id);
   }, [input, run]);
