@@ -5,11 +5,22 @@ interface SolutionCardProps {
   result: SolveResult | PhotoMathResult | null;
   error: string | null;
   onPick: (example: string) => void;
+  isThinking?: boolean;
 }
 
 const EMPTY_EXAMPLES = ["12 + 7 × 3", "3/4 + 1/2", "25% of 80", "15% off 240"];
 
-export function SolutionCard({ result, error, onPick }: SolutionCardProps) {
+export function SolutionCard({ result, error, onPick, isThinking = false }: SolutionCardProps) {
+  if (isThinking) {
+    return (
+      <section aria-live="polite" className="rounded-lg border border-border bg-card p-6 sm:p-8">
+        <p className="text-sm font-medium text-muted-foreground">
+          Working through the question…
+        </p>
+      </section>
+    );
+  }
+
   if (error) {
     return (
       <section
