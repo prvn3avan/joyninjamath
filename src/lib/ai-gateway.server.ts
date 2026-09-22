@@ -138,7 +138,8 @@ async function solveWithGateway(
     question: parsed.data.question,
     answerText: parsed.data.answer,
     ...(parsed.data.alternateForm ? { altText: parsed.data.alternateForm } : {}),
-    steps: parsed.data.steps,
+    // The list is already numbered in the UI, so drop any "1." the model wrote.
+    steps: parsed.data.steps.map((step) => step.replace(/^\s*\d+[.)]\s*/, "").trim()),
   };
 }
 

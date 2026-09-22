@@ -10,6 +10,15 @@ import { TopicButtons } from "@/components/TopicButtons";
 import { MathInputError, solveMath, type SolveResult } from "@/lib/math-solver";
 import { solveMathPhoto } from "@/lib/photo-math.functions";
 import type { PhotoMathResult } from "@/lib/photo-math.types";
+import { solveWordProblem } from "@/lib/word-math.functions";
+
+const MATH_WORDS =
+  /\b(what|is|calculate|plus|minus|times|divided|by|of|off|percent|and)\b/gi;
+
+/** Wordy input (a story problem) needs the AI solver, not the arithmetic parser. */
+function isWordProblem(text: string) {
+  return /[a-z]{2,}/i.test(text.replace(MATH_WORDS, " "));
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,34 +49,72 @@ function Index() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [photo, setPhoto] = useState<{ name: string; dataUrl: string } | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const analyzePhoto = useServerFn(solveMathPhoto);
+  const analyzeWords = useServerFn(solveWordProblem);
 
-  const run = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) {
-      setResult(null);
-      setError(null);
-      return;
-    }
-    try {
-      const r = solveMath(trimmed);
-      setResult(r);
-      setError(null);
-      setHistory((h) =>
-        h[0]?.input === r.input
-          ? h
-          : [{ input: r.input, answer: r.answerText }, ...h].slice(0, 5),
-      );
-    } catch (e) {
-      setResult(null);
-      setError(
-        e instanceof MathInputError
-          ? e.message
-          : "Something went wrong solving that — try rephrasing it.",
-      );
-    }
+  const remember = useCallback((item: HistoryItem) => {
+    setHistory((items) =>
+      [item, ...items.filter((existing) => existing.input !== item.input)].slice(0, 5),
+    );
   }, []);
+
+  const solveWords = useCallback(
+    async (text: string) => {
+      setIsThinking(true);
+      setError(null);
+      setResult(null);
+      try {
+        const response = await analyzeWords({ data: { problem: text } });
+        if (!response.ok) {
+          setError(response.error);
+          return;
+        }
+        setResult(response.result);
+        remember({ input: text, answer: response.result.answerText });
+      } catch {
+        setError("That question could not be solved. Please try again.");
+      } finally {
+        setIsThinking(false);
+      }
+    },
+    [analyzeWords, remember],
+  );
+
+  const run = useCallback(
+    (text: string, allowWords = false) => {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        setResult(null);
+        setError(null);
+        return;
+      }
+      if (isWordProblem(trimmed)) {
+        // Written questions go to the step-by-step solver, only when submitted.
+        if (allowWords) void solveWords(trimmed);
+        return;
+      }
+      try {
+        const r = solveMath(trimmed);
+        setResult(r);
+        setError(null);
+        setHistory((h) =>
+          h[0]?.input === r.input
+            ? h
+            : [{ input: r.input, answer: r.answerText }, ...h].slice(0, 5),
+        );
+      } catch (e) {
+        setResult(null);
+        setError(
+          e instanceof MathInputError
+            ? e.message
+            : "Something went wrong solving that — try rephrasing it.",
+        );
+      }
+    },
+    [solveWords],
+  );
 
   const selectPhoto = useCallback((file: File) => {
     if (!(["image/jpeg", "image/png", "image/webp"] as string[]).includes(file.type)) {
@@ -117,8 +164,9 @@ function Index() {
     }
   }, [analyzePhoto, isAnalyzing, photo]);
 
-  // Solve as the user types, with a short debounce.
+  // Solve arithmetic as the user types, with a short debounce.
   useEffect(() => {
+    if (isWordProblem(input)) return;
     const id = setTimeout(() => run(input), 250);
     return () => clearTimeout(id);
   }, [input, run]);
@@ -131,7 +179,8 @@ function Index() {
             JoyNinjaMath
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Answers with the working shown — sums, fractions, decimals and percentages.
+            Answers with the working shown — sums, fractions, percentages, and word problems
+            written in plain English. Press Enter to solve a written question.
           </p>
         </header>
 
@@ -139,9 +188,9 @@ function Index() {
           <MathInput
             value={input}
             onChange={setInput}
-            onSubmit={() => run(input)}
+            onSubmit={() => run(input, true)}
             onPhotoSelect={selectPhoto}
-            photoDisabled={isAnalyzing}
+            photoDisabled={isAnalyzing || isThinking}
             photoInputRef={photoInputRef}
           />
           {photo && (
@@ -161,7 +210,12 @@ function Index() {
           <TopicButtons onPick={setInput} />
         </div>
 
-        <SolutionCard result={result} error={error} onPick={setInput} />
+        <SolutionCard
+          result={result}
+          error={error}
+          onPick={setInput}
+          isThinking={isThinking}
+        />
 
         <HistoryList items={history} onPick={setInput} />
       </main>

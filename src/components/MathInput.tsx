@@ -42,7 +42,7 @@ export function MathInput({
               onSubmit();
             }
           }}
-          placeholder="Try 3/4 + 1/2 or 25% of 80"
+          placeholder="Try 3/4 + 1/2, 25% of 80, or a written question"
           aria-label="Math problem"
           autoComplete="off"
           spellCheck={false}
