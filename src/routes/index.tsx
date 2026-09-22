@@ -191,9 +191,9 @@ function Index() {
           <MathInput
             value={input}
             onChange={setInput}
-            onSubmit={() => run(input)}
+            onSubmit={() => run(input, true)}
             onPhotoSelect={selectPhoto}
-            photoDisabled={isAnalyzing}
+            photoDisabled={isAnalyzing || isThinking}
             photoInputRef={photoInputRef}
           />
           {photo && (
@@ -213,7 +213,12 @@ function Index() {
           <TopicButtons onPick={setInput} />
         </div>
 
-        <SolutionCard result={result} error={error} onPick={setInput} />
+        <SolutionCard
+          result={result}
+          error={error}
+          onPick={setInput}
+          isThinking={isThinking}
+        />
 
         <HistoryList items={history} onPick={setInput} />
       </main>
