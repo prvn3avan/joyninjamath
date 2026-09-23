@@ -3,8 +3,9 @@
  *
  * Parses plain-language math problems (arithmetic, fractions, decimals,
  * percentages) and produces an exact answer plus human-readable steps.
- * All arithmetic is done with exact rationals (numerator/denominator),
- * so `3/4 + 1/2` yields exactly `5/4`, not a rounded decimal.
+ * All arithmetic is done with exact rationals (numerator/denominator)
+ * built on BigInt, so `3/4 + 1/2` yields exactly `5/4`, and very large
+ * integers (up to 21+ digits) stay exact with no scientific notation.
  */
 
 export class MathInputError extends Error {
@@ -25,25 +26,22 @@ export interface SolveResult {
   steps: string[];
 }
 
-type Frac = { n: number; d: number };
+type Frac = { n: bigint; d: bigint };
 
-function gcd(a: number, b: number): number {
-  a = Math.abs(a);
-  b = Math.abs(b);
+function gcd(a: bigint, b: bigint): bigint {
+  a = a < 0n ? -a : a;
+  b = b < 0n ? -b : b;
   while (b) {
     [a, b] = [b, a % b];
   }
-  return a || 1;
+  return a || 1n;
 }
 
-function makeFrac(n: number, d = 1): Frac {
-  if (d === 0) {
+function makeFrac(n: bigint, d: bigint = 1n): Frac {
+  if (d === 0n) {
     throw new MathInputError("Dividing by zero isn't allowed — try a different number.");
   }
-  if (!Number.isFinite(n) || !Number.isFinite(d)) {
-    throw new MathInputError("That number is too large to work with — try smaller values.");
-  }
-  if (d < 0) {
+  if (d < 0n) {
     n = -n;
     d = -d;
   }
@@ -55,33 +53,30 @@ const addF = (a: Frac, b: Frac): Frac => makeFrac(a.n * b.d + b.n * a.d, a.d * b
 const subF = (a: Frac, b: Frac): Frac => makeFrac(a.n * b.d - b.n * a.d, a.d * b.d);
 const mulF = (a: Frac, b: Frac): Frac => makeFrac(a.n * b.n, a.d * b.d);
 const divF = (a: Frac, b: Frac): Frac => {
-  if (b.n === 0) {
+  if (b.n === 0n) {
     throw new MathInputError("Dividing by zero isn't allowed — try a different number.");
   }
   return makeFrac(a.n * b.d, a.d * b.n);
 };
 
 function fmtFrac(f: Frac): string {
-  return f.d === 1 ? String(f.n) : `${f.n}/${f.d}`;
+  return f.d === 1n ? f.n.toString() : `${f.n}/${f.d}`;
 }
 
-function reducedSuffix(res: Frac, rawN: number, rawD: number): string {
+function reducedSuffix(res: Frac, rawN: bigint, rawD: bigint): string {
   return res.n === rawN && res.d === rawD ? "" : ` = ${fmtFrac(res)}`;
 }
 
 function mixedText(f: Frac): string | null {
-  if (f.d === 1 || Math.abs(f.n) < f.d) return null;
-  const whole = Math.trunc(f.n / f.d);
-  const remN = Math.abs(f.n - whole * f.d);
-  const sign = f.n < 0 ? "−" : "";
-  return `${sign}${Math.abs(whole)} ${remN}/${f.d}`;
-}
-
-function isTerminatingDenominator(d: number): boolean {
-  let x = d;
-  while (x % 2 === 0) x /= 2;
-  while (x % 5 === 0) x /= 5;
-  return x === 1;
+  if (f.d === 1n) return null;
+  const absN = f.n < 0n ? -f.n : f.n;
+  if (absN < f.d) return null;
+  const whole = f.n / f.d; // BigInt division truncates toward zero
+  let remN = f.n % f.d;
+  if (remN < 0n) remN = -remN;
+  const sign = f.n < 0n ? "−" : "";
+  const absWhole = whole < 0n ? -whole : whole;
+  return `${sign}${absWhole} ${remN}/${f.d}`;
 }
 
 function trimZeros(s: string): string {
@@ -91,23 +86,38 @@ function trimZeros(s: string): string {
 
 /** Exact decimal text when the denominator terminates, otherwise a rounded one. */
 function decimalText(f: Frac): { text: string; exact: boolean } {
-  const value = f.n / f.d;
-  if (Number.isInteger(value)) return { text: String(value), exact: true };
-  if (isTerminatingDenominator(f.d) && f.d <= 1e9 && Math.abs(f.n) <= Number.MAX_SAFE_INTEGER) {
-    let dd = f.d;
-    let places = 0;
-    while (dd % 2 === 0) {
-      dd /= 2;
-      places++;
-    }
-    while (dd % 5 === 0) {
-      dd /= 5;
-      places++;
-    }
-    const scaled = (f.n * Math.pow(10, places)) / f.d;
-    if (Number.isInteger(scaled)) {
-      return { text: trimZeros((scaled / Math.pow(10, places)).toFixed(places)), exact: true };
-    }
+  if (f.d === 1n) return { text: f.n.toString(), exact: true };
+
+  // Count the factors of 2 and 5 — a terminating decimal iff nothing else remains.
+  let dd = f.d < 0n ? -f.d : f.d;
+  let places = 0;
+  while (dd % 2n === 0n) {
+    dd /= 2n;
+    places++;
+  }
+  while (dd % 5n === 0n) {
+    dd /= 5n;
+    places++;
+  }
+  if (dd === 1n && places <= 40) {
+    const p = 10n ** BigInt(places);
+    const scaled = (f.n * p) / f.d; // exact by construction
+    const neg = scaled < 0n;
+    const s = neg ? -scaled : scaled;
+    const intPart = s / p;
+    const fracPart = s % p;
+    let text =
+      fracPart === 0n
+        ? intPart.toString()
+        : `${intPart}.${fracPart.toString().padStart(places, "0")}`;
+    text = trimZeros(text);
+    return { text: neg ? `-${text}` : text, exact: true };
+  }
+
+  // Non-terminating: approximate with floating point for display only.
+  const value = Number(f.n) / Number(f.d);
+  if (!Number.isFinite(value)) {
+    return { text: fmtFrac(f), exact: true };
   }
   return { text: trimZeros(value.toFixed(6)), exact: false };
 }
@@ -142,10 +152,10 @@ function tokenize(expr: string): Token[] {
       const dot = raw.indexOf(".");
       let f: Frac;
       if (dot === -1) {
-        f = makeFrac(parseInt(raw, 10));
+        f = makeFrac(BigInt(raw));
       } else {
         const places = raw.length - dot - 1;
-        f = makeFrac(parseInt(raw.replace(".", ""), 10), Math.pow(10, places));
+        f = makeFrac(BigInt(raw.replace(".", "")), 10n ** BigInt(places));
       }
       tokens.push({ t: "num", f, raw });
       i += raw.length;
@@ -246,10 +256,10 @@ class Parser {
 
   private addSubStep(op: "+" | "-", l: Frac, r: Frac, res: Frac): string {
     const sym = SYMBOL[op];
-    if (l.d > 1 && r.d > 1) {
-      const lcm = (l.d * r.d) / gcd(l.d, r.d);
-      const a = (l.n * lcm) / l.d;
-      const b = (r.n * lcm) / r.d;
+    if (l.d > 1n && r.d > 1n) {
+      const lcm = (l.d / gcd(l.d, r.d)) * r.d;
+      const a = l.n * (lcm / l.d);
+      const b = r.n * (lcm / r.d);
       const rawSum = op === "+" ? a + b : a - b;
       if (lcm === l.d && lcm === r.d) {
         return `${a}/${lcm} ${sym} ${b}/${lcm} = ${rawSum}/${lcm}${reducedSuffix(res, rawSum, lcm)}.`;
@@ -275,7 +285,7 @@ class Parser {
         const sym = SYMBOL[t.v];
         // Don't narrate reading a plain fraction like 3/4 — only real divisions.
         const isFractionLiteral =
-          t.v === "/" && left.d === 1 && right.d === 1 && result.d !== 1;
+          t.v === "/" && left.d === 1n && right.d === 1n && result.d !== 1n;
         if (!isFractionLiteral) {
           this.steps.push(
             `${verb}: ${fmtFrac(left)} ${sym} ${fmtFrac(right)} = ${fmtFrac(result)}`,
@@ -318,7 +328,7 @@ class Parser {
       const p = this.peek();
       if (p?.t === "pct") {
         this.next();
-        const v = makeFrac(t.f.n, t.f.d * 100);
+        const v = makeFrac(t.f.n, t.f.d * 100n);
         this.steps.push(`${t.raw}% means ${t.raw} ÷ 100 = ${fmtFrac(v)}.`);
         return v;
       }
@@ -410,8 +420,8 @@ export function solveMath(input: string): SolveResult {
 
   let answerText: string;
   let altText: string | undefined;
-  if (result.d === 1) {
-    answerText = String(result.n);
+  if (result.d === 1n) {
+    answerText = result.n.toString();
   } else if (hasFraction || !dec.exact) {
     // Lead with the exact fraction; show the decimal alongside.
     answerText = mixed ?? fmtFrac(result);
